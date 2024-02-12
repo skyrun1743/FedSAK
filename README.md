@@ -13,7 +13,7 @@ Furthermore, we derive convergence and generalization bounds under non-convex se
 
 ### Model
 
-![图片](img/frame.pdf)
+![图片](img/frame.png)
 
 Framework of our proposed FedSAK.
 
