@@ -192,7 +192,7 @@ class FedAvgCNN(nn.Module):
                         padding=0,
                         stride=1,
                         bias=True),
-            # nn.BatchNorm2d(32),
+            nn.BatchNorm2d(32),
             nn.ReLU(inplace=True), 
             nn.MaxPool2d(kernel_size=(2, 2))
         )
@@ -203,7 +203,7 @@ class FedAvgCNN(nn.Module):
                         padding=0,
                         stride=1,
                         bias=True),
-            # nn.BatchNorm2d(64),
+            nn.BatchNorm2d(64),
             nn.ReLU(inplace=True), 
             nn.MaxPool2d(kernel_size=(2, 2))
         )
@@ -212,48 +212,20 @@ class FedAvgCNN(nn.Module):
         self.fc2 = nn.Linear(512, num_classes)
         self.act = nn.ReLU()
 
-        self.share = nn.Sequential(
+        self.FC = nn.Sequential(
             self.fc1,
             self.act,
             self.fc2
             )
 
-    def forward(self, x): #[1861, 3, 32, 32]
-        out = self.conv1(x) #[1861, 32, 14, 14]
-        out = self.conv2(out) #[1861, 32, 5, 5]
+    def forward(self, x): 
+        out = self.conv1(x) 
+        out = self.conv2(out) 
         out = torch.flatten(out, 1)
-        out = self.share(out)
+        out = self.FC(out)
         
         return F.log_softmax(out, dim=1)
-    
-class CNNpacs(nn.Module):
-    def __init__(self, num_classes):
-        super(CNNpacs, self).__init__()  # (227*227*3)
 
-        self.conv1 = nn.Conv2d(3, 3, 64) # (164*164*3)
-        self.pool = nn.MaxPool2d(2, 2) # (82*82*6) (25*25*1)
-        self.conv2 = nn.Conv2d(3, 1, 33) # (50*50*1)
-        self.fc1 = nn.Linear(1 * 25 * 25, 200)
-        self.fc2 = nn.Linear(200, 100)
-        self.fc3 = nn.Linear(100, num_classes)
-
-        self.weight_keys = [['fc1.weight', 'fc1.bias'],
-                            ['fc2.weight', 'fc2.bias'],
-                            ['fc3.weight', 'fc3.bias'],
-                            ['conv2.weight', 'conv2.bias'],
-                            ['conv1.weight', 'conv1.bias'],
-                            ]
-                            
-    def forward(self, x):
-        x = x.permute(0, 3, 1, 2)
-        x = self.pool(F.relu(self.conv1(x))) #[337, 227, 227, 3]
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 25 * 25 * 1)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return F.log_softmax(x, dim=1)
-    
 class CNN_encoder(nn.Module):
 
     def __init__(self, dim_out=512):
@@ -280,18 +252,6 @@ class CNN_encoder(nn.Module):
         y = self.fc(x.view(-1, 128*23*23))
         return y
 
-class CNNpacs2(nn.Module):
-    def __init__(self, num_classes: int, hidden_size: int = 512):
-        super(CNNpacs2, self).__init__()
-        self.semantic_encoder = CNN_encoder()
-        self.semantic_branch = nn.Linear(hidden_size, hidden_size)
-        self.cls = nn.Linear(hidden_size, num_classes)
-
-    def forward(self, x):
-        fea = self.semantic_encoder(x)
-        fea = self.semantic_branch(fea)
-        out = self.cls(fea)
-        return F.log_softmax(out, dim=1)
 
 class Mclr_Logistic(nn.Module):
     def __init__(self, input_dim = 784, output_dim = 10):
@@ -304,3 +264,126 @@ class Mclr_Logistic(nn.Module):
         x = self.fc1(x)
         output = F.log_softmax(x, dim=1)
         return output
+    
+class heteropacs_sharelayer(nn.Module):
+    def __init__(self, cin: int, hidden_size: int = 512):
+        super(heteropacs_sharelayer, self).__init__()
+
+        self.share_layer = nn.Sequential(
+            nn.Linear(cin, hidden_size), 
+            nn.ReLU(),
+            nn.Linear(hidden_size, hidden_size)
+        )
+
+    def forward(self, x):
+        return self.share_layer(x)
+    
+
+class heteropacs(nn.Module):
+    def __init__(self, num_classes: int, group: str, hidden_size: int = 512):
+        super(heteropacs, self).__init__()
+
+        if (group == "art"):
+            self.hetero_feature = nn.Sequential(
+                nn.Conv2d(3, 32, kernel_size=3, padding=0, stride=1, bias=True),  
+                nn.ReLU(inplace=True), 
+                nn.MaxPool2d(kernel_size=(2, 2)), 
+                nn.Conv2d(32, 64, kernel_size=5, padding=0, stride=1, bias=True), 
+                nn.ReLU(inplace=True),
+                nn.MaxPool2d(kernel_size=(2, 2))
+            )
+        elif (group == "cartoon"):
+            self.hetero_feature = nn.Sequential(
+                nn.Conv2d(3, 32, kernel_size=3, padding=0, stride=1, bias=True),  
+                nn.ReLU(inplace=True), 
+                nn.MaxPool2d(kernel_size=(2, 2)), 
+                nn.Conv2d(32, 64, kernel_size=5, padding=0, stride=1, bias=True), 
+                nn.ReLU(inplace=True),
+                nn.MaxPool2d(kernel_size=(2, 2))
+            )
+        elif (group == "photo"):
+            self.hetero_feature = nn.Sequential(
+                nn.Conv2d(3, 32, kernel_size=3, padding=0, stride=1, bias=True),  
+                nn.ReLU(inplace=True), 
+                nn.MaxPool2d(kernel_size=(2, 2)), 
+                nn.Conv2d(32, 64, kernel_size=5, padding=0, stride=1, bias=True), 
+                nn.ReLU(inplace=True),
+                nn.MaxPool2d(kernel_size=(2, 2))
+            )
+        elif (group == "sketch"):
+            self.hetero_feature = nn.Sequential(
+                nn.Conv2d(3, 32, kernel_size=3, padding=0, stride=1, bias=True), 
+                nn.ReLU(inplace=True), 
+                nn.MaxPool2d(kernel_size=(2, 2)),
+                nn.Conv2d(32, 64, kernel_size=5, padding=0, stride=1, bias=True),
+                nn.ReLU(inplace=True),
+                nn.MaxPool2d(kernel_size=(2, 2))
+            )
+        
+        self.share_layer = heteropacs_sharelayer(1600, hidden_size)
+        self.cls = nn.Linear(hidden_size, num_classes)
+        
+    def forward(self, x, dataset): 
+        if(dataset == "art"):
+            fea = self.hetero_feature(x)
+        elif(dataset == "cartoon"):
+            fea = self.hetero_feature(x)
+        elif(dataset == "photo"):
+            fea = self.hetero_feature(x)
+        elif(dataset == "sketch"):
+            fea = self.hetero_feature(x)
+
+        fea_p = torch.flatten(fea, 1)
+        fea = self.share_layer(fea_p)
+        out = self.cls(fea)
+        return F.log_softmax(out, dim=1)
+    
+class heteroface_sharelayer(nn.Module):
+    def __init__(self, cin: int, hidden_size: int = 512):
+        super(heteroface_sharelayer, self).__init__()
+
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(cin,
+                        32,
+                        kernel_size=5,
+                        padding=0,
+                        stride=1,
+                        bias=True),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True), 
+            nn.MaxPool2d(kernel_size=(2, 2))
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(32,
+                        64,
+                        kernel_size=5,
+                        padding=0,
+                        stride=1,
+                        bias=True),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True), 
+            nn.MaxPool2d(kernel_size=(2, 2))
+        )
+
+        self.fc1 = nn.Sequential(
+            nn.Linear(1600, 512), 
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = torch.flatten(x, 1)
+        return self.fc1(x)
+    
+class heteroface(nn.Module):
+    def __init__(self, num_classes: int, hidden_size: int = 512):
+        super(heteroface, self).__init__()
+
+        self.share_layer = heteroface_sharelayer(3, hidden_size)
+        self.cls = nn.Linear(hidden_size, num_classes)
+        
+    def forward(self, x):
+        x = self.share_layer(x)
+        logits = self.cls(x)
+        return F.log_softmax(logits, dim=1), x
