@@ -26,6 +26,8 @@ def main(dataset, algorithm, model, batch_size, learning_rate, L_k, num_glob_ite
     device = torch.device("cuda:{}".format(gpu) if torch.cuda.is_available() and gpu != -1 else "cpu")
 
     data = read_data(dataset) , dataset
+    
+    clients = data[0][0]
 
     for i in range(times):
         print("---------------Running time:------------", i)
@@ -53,6 +55,14 @@ def main(dataset, algorithm, model, batch_size, learning_rate, L_k, num_glob_ite
                 model = FedAvgCNN(in_features=3, num_classes=7, dim=1600).to(device), model
             else:
                 model = FedAvgCNN().to(device), model
+
+        elif(model == "hetero"):
+            if(dataset == "pacs"):
+                model = heteropacs_sharelayer(1600).to(device), {client_id:heteropacs(7, client_id.split("_")[0]).to(device) for client_id in clients}, model
+            elif (dataset == "face"):
+                model = heteroface_sharelayer(3).to(device), {client_id: (heteroface(8).to(device) if int(client_id) % 2 == 0 else heteroface(2).to(device)) for client_id in clients}, model
+            else:
+                return
                 
         # select algorithm        
         if(algorithm == "FedSAK"):
@@ -94,5 +104,3 @@ if __name__ == "__main__":
         gpu = args.gpu,
         times = args.times
         )
-
-
