@@ -17,5 +17,13 @@ Furthermore, we derive convergence and generalization bounds under non-convex se
 
 Framework of our proposed FedSAK.
 
-### Code
-Project code will be released in the near future...
+### Training & Testing
+```
+python main.py
+```
+
+## Acknowledgements
+
+This repo is based on [FedU](https://github.com/CharlieDinh/FedU_FMTL). 
+
+Thanks to the original authors for their work!
