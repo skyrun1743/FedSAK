@@ -9,7 +9,7 @@ def args_parser():
 
     parser.add_argument("--dataset", type=str, default="human_activity")
     parser.add_argument("--model", type=str, default="dnn", choices=["dnn", "mclr", "cnn"])
-    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--batch_size", type=int, default=20)
     parser.add_argument("--learning_rate", type=float, default=0.01, help="Local learning rate")
     parser.add_argument("--L_k", type=float, default=0.2, help="Regularization term lambda")
     parser.add_argument("--num_global_iters", type=int, default=100)
