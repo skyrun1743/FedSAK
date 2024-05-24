@@ -1,7 +1,6 @@
 # FedSAK
 A Swiss Army Knife for Heterogeneous Federated Multi-Task Learning: Flexible Coupling via Trace Norm
 
-> Submitted to KDD2024
 
 ### Abstract
 
