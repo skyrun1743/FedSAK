@@ -7,7 +7,6 @@ from FLAlgorithms.servers.serveravg import FedAvg
 from FLAlgorithms.servers.serverFedSAK import FedSAK
 from FLAlgorithms.trainmodel.models import *
 from utils.plot_utils import *
-
 from utils.model_utils import read_data
 from utils.options import args_parser
 
